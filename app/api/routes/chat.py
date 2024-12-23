@@ -86,44 +86,37 @@ async def chat(request: ChatRequest):
         if not response.message.tool_calls:
             return response
             
-        # Initialize new messages list with original messages
+        # Initialize messages with the original messages and the assistant's response
         messages = list(request.messages)
+        messages.append(response.message)  # Assistant message with tool_calls
         
-        # Add the assistant's message with tool calls
-        assistant_message = response.message
-        messages.append(assistant_message)
-        
-        # Process each tool call one at a time
-        for tool_call in assistant_message.tool_calls:
+        # Process each tool call
+        for tool_call in response.message.tool_calls:
             # Execute the tool call
             result = await execute_tool_call(tool_call)
             if not result["success"]:
                 raise ChatError(f"Tool call failed: {result['error']}")
             
-            # Create tool response message
+            # Add the tool response message with proper formatting
             tool_response = ChatMessage(
                 role="tool",
                 content=json.dumps(result["data"]) if result["data"] else "",
                 tool_call_id=tool_call.id,
                 name=tool_call.function["name"]
             )
-            
-            # Get a new completion with the tool response
-            tool_messages = list(messages)  # Create a copy of messages
-            tool_messages.append(tool_response)  # Add tool response
-            
-            # Get completion with tool response
-            completion = await get_chat_completion(tool_messages)
-            
-            # Update messages with both tool response and assistant's response
             messages.append(tool_response)
-            messages.append(completion.message)
+            
+            print(f"Tool response added: {tool_response}")  # Debug logging
         
-        # Return the final response
-        return ChatResponse(
-            message=messages[-1],
-            requires_tool=False
-        )
+        # Get final response after all tool calls are processed
+        print("Getting final response with messages:", json.dumps(messages, default=str))  # Debug logging
+        final_response = await get_chat_completion(messages)
+        
+        if not final_response.message.content:
+            # If no content in response, add a default message
+            final_response.message.content = "I've processed your request. Is there anything specific you'd like to know about the extracted profile?"
+            
+        return final_response
         
     except Exception as e:
         print(f"Chat error: {str(e)}")
@@ -197,14 +190,19 @@ async def get_profile():
     """Get the latest generated profile content."""
     try:
         html_path = os.path.join("output", "structured_profile.html")
+        print(f"Attempting to read profile from: {html_path}")
+        
         if not os.path.exists(html_path):
+            print(f"Profile file not found at: {html_path}")
             raise HTTPException(status_code=404, detail="No profile has been generated yet")
             
         with open(html_path, 'r', encoding='utf-8') as f:
             content = f.read()
             
+        print(f"Successfully read profile content (length: {len(content)})")
         return {"content": content}
     except Exception as e:
+        print(f"Error reading profile: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/profile/download")

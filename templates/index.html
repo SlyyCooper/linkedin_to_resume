@@ -246,14 +246,22 @@
         
         async function displayProfile(profile) {
             try {
+                console.log('Attempting to display profile...');
                 // Fetch the profile content from our endpoint
                 const response = await fetch('/api/profile');
                 if (!response.ok) {
+                    console.error('Failed to fetch profile:', response.status, response.statusText);
                     throw new Error('Failed to fetch profile content');
                 }
                 
                 const data = await response.json();
+                console.log('Received profile data:', data);
+                
                 const contentDiv = document.getElementById('profile-content');
+                if (!contentDiv) {
+                    console.error('Could not find profile-content div');
+                    return;
+                }
                 
                 // Add download button and display the HTML content
                 contentDiv.innerHTML = `
@@ -267,8 +275,11 @@
                             font-size: 14px;
                         ">Download DOCX</a>
                     </div>
-                    ${data.content}  <!-- The HTML content will be displayed directly -->
+                    <div class="profile-display">
+                        ${data.content}
+                    </div>
                 `;
+                console.log('Profile content updated');
             } catch (error) {
                 console.error('Error displaying profile:', error);
             }
@@ -286,6 +297,7 @@
             appendMessage(message, true);
             
             try {
+                console.log('Sending message to backend...');
                 // Send to backend
                 const response = await fetch('/api/chat', {
                     method: 'POST',
@@ -300,7 +312,12 @@
                     })
                 });
                 
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
                 const data = await response.json();
+                console.log('Received response:', data);
                 
                 // Update message history
                 messageHistory.push(
@@ -311,14 +328,15 @@
                 // Display assistant response
                 appendMessage(data.message.content, false);
                 
-                // If there's profile data in the response, display it
+                // Check for tool calls and profile data
                 if (data.message.tool_calls) {
+                    console.log('Found tool calls:', data.message.tool_calls);
                     const toolCall = data.message.tool_calls.find(
                         call => call.function.name === 'linkedin_highlight_and_extract'
                     );
                     if (toolCall) {
-                        const result = JSON.parse(toolCall.function.arguments);
-                        displayProfile(result);
+                        console.log('Found LinkedIn extraction tool call');
+                        await displayProfile();  // Call displayProfile to show the extracted profile
                     }
                 }
                 

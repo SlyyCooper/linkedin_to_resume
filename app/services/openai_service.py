@@ -53,7 +53,13 @@ Important security notes:
 - Always handle credentials securely
 - Verify the profile URL format
 - Inform users about the extraction process
-- Let them know their data is handled privately"""
+- Let them know their data is handled privately
+
+After tool execution:
+- Always provide a clear response about what was done
+- If the tool succeeded, explain what was extracted/processed
+- If there were any issues, explain what went wrong
+- Ask if the user needs anything else"""
         })
         
         # Add the rest of the messages
@@ -61,8 +67,20 @@ Important security notes:
             message_dict = {"role": msg.role, "content": msg.content}
             if msg.tool_call_id:  # For tool response messages
                 message_dict["tool_call_id"] = msg.tool_call_id
+                message_dict["name"] = msg.name  # Add function name for tool messages
+            if msg.tool_calls:  # For assistant messages with tool calls
+                message_dict["tool_calls"] = [
+                    {
+                        "id": tool.id,
+                        "type": tool.type,
+                        "function": {
+                            "name": tool.function["name"],
+                            "arguments": tool.function["arguments"]
+                        }
+                    } for tool in msg.tool_calls
+                ]
             openai_messages.append(message_dict)
-        
+            
         try:
             # Call OpenAI with the latest model and features
             response = client.chat.completions.create(
