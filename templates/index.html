@@ -4,6 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>LinkedIn Profile Extractor</title>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <style>
         body {
             margin: 0;
@@ -109,17 +110,22 @@
         .profile-content {
             max-width: 800px;
             margin: 0 auto;
+            font-family: Calibri, sans-serif;
+            line-height: 1.15;
         }
         
         .profile-content h1 {
             margin: 0 0 10px 0;
             color: #333;
+            font-size: 18pt;
+            font-weight: bold;
         }
         
         .profile-content h2 {
             color: #666;
+            font-size: 14pt;
             font-weight: normal;
-            margin: 0 0 30px 0;
+            margin: 0 0 20px 0;
         }
         
         .profile-section {
@@ -128,6 +134,8 @@
         
         .profile-section h3 {
             color: #333;
+            font-size: 14pt;
+            font-weight: bold;
             border-bottom: 2px solid #007AFF;
             padding-bottom: 8px;
             margin-bottom: 20px;
@@ -140,26 +148,63 @@
         .experience-item h4, .education-item h4 {
             margin: 0 0 5px 0;
             color: #333;
+            font-size: 11pt;
+            font-weight: bold;
         }
         
         .experience-meta, .education-meta {
             color: #666;
-            font-size: 14px;
+            font-size: 11pt;
+            font-style: italic;
             margin-bottom: 10px;
+        }
+        
+        .experience-description {
+            font-size: 11pt;
+            color: #333;
+            margin-top: 8px;
+            line-height: 1.4;
         }
         
         .skills-list {
             display: flex;
             flex-wrap: wrap;
             gap: 10px;
+            margin-top: 10px;
         }
         
         .skill-tag {
             background: #f0f0f0;
             padding: 6px 12px;
             border-radius: 16px;
-            font-size: 14px;
+            font-size: 11pt;
             color: #333;
+        }
+        
+        .recommendations-section {
+            margin-top: 30px;
+        }
+        
+        .recommendation-item {
+            margin-bottom: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+        
+        .recommendation-author {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        
+        .recommendation-relationship {
+            font-style: italic;
+            color: #666;
+            margin-bottom: 10px;
+        }
+        
+        .recommendation-text {
+            line-height: 1.4;
         }
     </style>
 </head>
@@ -199,69 +244,34 @@
             messagesDiv.scrollTop = messagesDiv.scrollHeight;
         }
         
-        function displayProfile(profile) {
-            const contentDiv = document.getElementById('profile-content');
-            let html = `
-                <h1>${profile.name}</h1>
-                <h2>${profile.headline}</h2>
+        async function displayProfile(profile) {
+            try {
+                // Fetch the profile content from our endpoint
+                const response = await fetch('/api/profile');
+                if (!response.ok) {
+                    throw new Error('Failed to fetch profile content');
+                }
                 
-                <div class="profile-section">
-                    <h3>About</h3>
-                    <p>${profile.about}</p>
-                </div>
+                const data = await response.json();
+                const contentDiv = document.getElementById('profile-content');
                 
-                <div class="profile-section">
-                    <h3>Experience</h3>
-                    ${profile.experience.map(exp => `
-                        <div class="experience-item">
-                            <h4>${exp.title} at ${exp.company}</h4>
-                            <div class="experience-meta">${exp.duration}</div>
-                            ${exp.description ? `<p>${exp.description}</p>` : ''}
-                        </div>
-                    `).join('')}
-                </div>
-                
-                <div class="profile-section">
-                    <h3>Education</h3>
-                    ${profile.education.map(edu => `
-                        <div class="education-item">
-                            <h4>${edu.school}</h4>
-                            <div class="education-meta">
-                                ${edu.degree}${edu.field ? ` in ${edu.field}` : ''}
-                                ${edu.years ? ` (${edu.years})` : ''}
-                            </div>
-                        </div>
-                    `).join('')}
-                </div>
-                
-                <div class="profile-section">
-                    <h3>Skills</h3>
-                    <div class="skills-list">
-                        ${profile.skills.map(skill => `
-                            <span class="skill-tag">${skill}</span>
-                        `).join('')}
+                // Add download button and display the HTML content
+                contentDiv.innerHTML = `
+                    <div class="profile-actions" style="margin-bottom: 20px; text-align: right;">
+                        <a href="/api/profile/download" class="download-btn" style="
+                            padding: 8px 16px;
+                            background: #007AFF;
+                            color: white;
+                            text-decoration: none;
+                            border-radius: 6px;
+                            font-size: 14px;
+                        ">Download DOCX</a>
                     </div>
-                </div>
-            `;
-            
-            if (profile.certifications && profile.certifications.length > 0) {
-                html += `
-                    <div class="profile-section">
-                        <h3>Certifications</h3>
-                        ${profile.certifications.map(cert => `
-                            <div class="education-item">
-                                <h4>${cert.name}</h4>
-                                <div class="education-meta">
-                                    Issued by ${cert.issuer}
-                                    ${cert.date ? ` (${cert.date})` : ''}
-                                </div>
-                            </div>
-                        `).join('')}
-                    </div>
+                    ${data.content}  <!-- The HTML content will be displayed directly -->
                 `;
+            } catch (error) {
+                console.error('Error displaying profile:', error);
             }
-            
-            contentDiv.innerHTML = html;
         }
         
         async function sendMessage() {

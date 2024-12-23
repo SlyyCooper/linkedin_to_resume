@@ -13,6 +13,7 @@ class ChatMessage(BaseModel):
     content: str
     tool_calls: Optional[List[ToolCall]] = None
     tool_call_id: Optional[str] = None  # For tool response messages
+    name: Optional[str] = None  # For tool response messages, contains the function name
 
 class ChatRequest(BaseModel):
     """Chat request model with support for message history and tool outputs."""

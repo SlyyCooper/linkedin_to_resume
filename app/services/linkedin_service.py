@@ -161,7 +161,7 @@ def markdown_to_docx(markdown_file: str, output_file: str) -> str:
 
 def save_structured_profile(profile: LinkedInProfile, output_dir: str):
     """
-    Saves the structured profile as a clean markdown file and a simple DOCX.
+    Saves the structured profile as markdown, HTML, and DOCX formats.
     """
     # Generate markdown content
     markdown = f"""# {profile.name}
@@ -217,16 +217,110 @@ Issued by {cert.issuer}{f' ({cert.date})' if cert.date else ''}
 {rec.text}
 """
     
+    # Generate HTML content
+    html = f"""
+    <div class="profile-header">
+        <h1>{profile.name}</h1>
+        <h2>{profile.headline}</h2>
+        <p class="location"><strong>Location:</strong> {profile.location}</p>
+    </div>
+
+    <div class="profile-section">
+        <h3>About</h3>
+        <p>{profile.about}</p>
+    </div>
+
+    <div class="profile-section">
+        <h3>Experience</h3>
+        {''.join([f'''
+        <div class="experience-item">
+            <h4>{exp.title} at {exp.company}</h4>
+            <div class="experience-meta">{exp.duration}</div>
+            <div class="experience-description">{exp.description if exp.description else ''}</div>
+        </div>
+        ''' for exp in profile.experience])}
+    </div>
+
+    <div class="profile-section">
+        <h3>Education</h3>
+        {''.join([f'''
+        <div class="education-item">
+            <h4>{edu.school}</h4>
+            <div class="education-meta">
+                {edu.degree}{f' in {edu.field}' if edu.field else ''}
+                {f'<br>{edu.years}' if edu.years else ''}
+            </div>
+        </div>
+        ''' for edu in profile.education])}
+    </div>
+    """
+
+    if profile.skills:
+        html += f"""
+        <div class="profile-section">
+            <h3>Skills</h3>
+            <div class="skills-list">
+                {''.join([f'<span class="skill-tag">{skill}</span>' for skill in profile.skills])}
+            </div>
+        </div>
+        """
+
+    if profile.certifications:
+        html += f"""
+        <div class="profile-section">
+            <h3>Certifications</h3>
+            {''.join([f'''
+            <div class="certification-item">
+                <h4>{cert.name}</h4>
+                <div class="certification-meta">
+                    Issued by {cert.issuer}{f' ({cert.date})' if cert.date else ''}
+                </div>
+            </div>
+            ''' for cert in profile.certifications])}
+        </div>
+        """
+
+    if profile.languages:
+        html += f"""
+        <div class="profile-section">
+            <h3>Languages</h3>
+            <div class="skills-list">
+                {''.join([f'<span class="skill-tag">{lang}</span>' for lang in profile.languages])}
+            </div>
+        </div>
+        """
+
+    if profile.recommendations:
+        html += f"""
+        <div class="profile-section recommendations-section">
+            <h3>Recommendations</h3>
+            {''.join([f'''
+            <div class="recommendation-item">
+                <div class="recommendation-author">{rec.author}</div>
+                <div class="recommendation-relationship">{rec.relationship}</div>
+                <div class="recommendation-text">{rec.text}</div>
+            </div>
+            ''' for rec in profile.recommendations])}
+        </div>
+        """
+
+    html += "</div>"
+    
     # Save markdown
     markdown_file = os.path.join(output_dir, "structured_profile.md")
     with open(markdown_file, "w", encoding="utf-8") as f:
         f.write(markdown)
     
+    # Save HTML
+    html_file = os.path.join(output_dir, "structured_profile.html")
+    with open(html_file, "w", encoding="utf-8") as f:
+        f.write(html)
+    
     # Save DOCX
     docx_file = os.path.join(output_dir, "structured_profile.docx")
     markdown_to_docx(markdown_file, docx_file)
     
-    return markdown_file, docx_file
+    return markdown_file, html_file, docx_file
 
 def linkedin_highlight_and_extract(
     email: str,

@@ -1,4 +1,5 @@
 from fastapi import APIRouter, WebSocket, HTTPException, status
+from fastapi.responses import FileResponse
 from app.models.chat import ChatRequest, ChatResponse, ChatMessage, ToolCall
 from app.services.openai_service import (
     get_chat_completion,
@@ -15,6 +16,7 @@ from app.services.linkedin_service import (
 )
 from app.core.config import get_settings
 import json
+import os
 from typing import Dict, Any
 import datetime
 
@@ -77,44 +79,51 @@ async def execute_tool_call(tool_call: ToolCall) -> Dict[str, Any]:
 async def chat(request: ChatRequest):
     """Handle chat requests with function calling support."""
     try:
-        # Print debug info
-        print("Received chat request with messages:", len(request.messages))
-        
         # Get initial response from OpenAI
         response = await get_chat_completion(request.messages)
-        
-        # Print debug info
-        print("Got response:", response)
         
         # If no tool calls, return the response directly
         if not response.message.tool_calls:
             return response
             
-        # Create new messages array with original messages
+        # Initialize new messages list with original messages
         messages = list(request.messages)
         
-        # Add the assistant's message with the tool calls
-        messages.append(response.message)
+        # Add the assistant's message with tool calls
+        assistant_message = response.message
+        messages.append(assistant_message)
         
-        # For each tool call, execute it and immediately add its result
-        for tool_call in response.message.tool_calls:
+        # Process each tool call one at a time
+        for tool_call in assistant_message.tool_calls:
             # Execute the tool call
             result = await execute_tool_call(tool_call)
             if not result["success"]:
                 raise ChatError(f"Tool call failed: {result['error']}")
             
-            # Immediately add the tool response for this specific tool call
-            messages.append(
-                ChatMessage(
-                    role="tool",
-                    content=json.dumps(result["data"]),
-                    tool_call_id=tool_call.id  # Must match the ID from the tool call
-                )
+            # Create tool response message
+            tool_response = ChatMessage(
+                role="tool",
+                content=json.dumps(result["data"]) if result["data"] else "",
+                tool_call_id=tool_call.id,
+                name=tool_call.function["name"]
             )
+            
+            # Get a new completion with the tool response
+            tool_messages = list(messages)  # Create a copy of messages
+            tool_messages.append(tool_response)  # Add tool response
+            
+            # Get completion with tool response
+            completion = await get_chat_completion(tool_messages)
+            
+            # Update messages with both tool response and assistant's response
+            messages.append(tool_response)
+            messages.append(completion.message)
         
-        # Get final response with all tool results
-        final_response = await get_chat_completion(messages)
-        return final_response
+        # Return the final response
+        return ChatResponse(
+            message=messages[-1],
+            requires_tool=False
+        )
         
     except Exception as e:
         print(f"Chat error: {str(e)}")
@@ -181,4 +190,32 @@ async def health_check():
             "status": "unhealthy",
             "error": str(e),
             "timestamp": datetime.datetime.now().isoformat()
-        } 
+        }
+
+@router.get("/profile")
+async def get_profile():
+    """Get the latest generated profile content."""
+    try:
+        html_path = os.path.join("output", "structured_profile.html")
+        if not os.path.exists(html_path):
+            raise HTTPException(status_code=404, detail="No profile has been generated yet")
+            
+        with open(html_path, 'r', encoding='utf-8') as f:
+            content = f.read()
+            
+        return {"content": content}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/profile/download")
+async def download_profile():
+    """Download the generated DOCX file."""
+    docx_path = os.path.join("output", "structured_profile.docx")
+    if not os.path.exists(docx_path):
+        raise HTTPException(status_code=404, detail="No profile document has been generated yet")
+        
+    return FileResponse(
+        docx_path,
+        media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        filename="profile.docx"
+    ) 
