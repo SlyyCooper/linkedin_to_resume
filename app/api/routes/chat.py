@@ -14,6 +14,7 @@ from app.services.linkedin_service import (
     structure_profile_data,
     save_structured_profile
 )
+from app.services.response_formatter_service import ResponseFormatter
 from app.core.config import get_settings
 import json
 import os
@@ -82,7 +83,11 @@ async def chat(request: ChatRequest):
         # Get initial response from OpenAI
         response = await get_chat_completion(request.messages)
         
-        # If no tool calls, return the response directly
+        # Format the initial response content
+        if response.message.content:
+            response.message.content = ResponseFormatter.format_response(response.message.content)
+        
+        # If no tool calls, return the formatted response directly
         if not response.message.tool_calls:
             return response
             
@@ -97,10 +102,16 @@ async def chat(request: ChatRequest):
             if not result["success"]:
                 raise ChatError(f"Tool call failed: {result['error']}")
             
+            # Format the tool response if it's a profile
+            if tool_call.function["name"] == "linkedin_highlight_and_extract" and result["data"]:
+                formatted_content = ResponseFormatter.format_profile_summary(result["data"])
+            else:
+                formatted_content = json.dumps(result["data"]) if result["data"] else ""
+            
             # Add the tool response message with proper formatting
             tool_response = ChatMessage(
                 role="tool",
-                content=json.dumps(result["data"]) if result["data"] else "",
+                content=formatted_content,
                 tool_call_id=tool_call.id,
                 name=tool_call.function["name"]
             )
@@ -112,9 +123,14 @@ async def chat(request: ChatRequest):
         print("Getting final response with messages:", json.dumps(messages, default=str))  # Debug logging
         final_response = await get_chat_completion(messages)
         
+        # Format the final response content
         if not final_response.message.content:
             # If no content in response, add a default message
-            final_response.message.content = "I've processed your request. Is there anything specific you'd like to know about the extracted profile?"
+            final_response.message.content = ResponseFormatter.format_response(
+                "I've processed your request. Is there anything specific you'd like to know about the extracted profile?"
+            )
+        else:
+            final_response.message.content = ResponseFormatter.format_response(final_response.message.content)
             
         return final_response
         
@@ -148,6 +164,10 @@ async def test_completion():
         
         # Get completion without any tools to keep it simple
         response = await get_chat_completion(test_messages)
+        
+        # Format the response
+        if response.message.content:
+            response.message.content = ResponseFormatter.format_response(response.message.content)
         
         return {
             "status": "success",
