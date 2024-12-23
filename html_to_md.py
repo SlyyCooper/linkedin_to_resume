@@ -24,6 +24,7 @@ from rich.panel import Panel
 from rich import print
 from rich.progress import Progress
 from rich.spinner import Spinner
+from bs4 import BeautifulSoup
 
 # Create a global Rich console for pretty output
 console = Console()
@@ -77,16 +78,82 @@ def fetch_html(url):
     except requests.exceptions.RequestException as e:
         raise RuntimeError(f"Error fetching the URL: {e}")
 
+def process_doc_symbols(html_content):
+    """
+    Pre-processes HTML to handle documentation symbols and pseudo-elements,
+    including method indicators ('meth').
+    """
+    soup = BeautifulSoup(html_content, 'html.parser')
+    
+    # Common doc symbol patterns
+    DOC_PATTERNS = {
+        'class': '``class``',
+        'property': '@property',
+        'abstractmethod': '@abstractmethod',
+        'method': '``method``',
+        'meth': '``meth``'  # Added method indicator
+    }
+    
+    # Process code elements with doc-symbol classes
+    for code_elem in soup.find_all(['code', 'span'], class_=lambda x: x and ('doc-symbol' in x or 'meth' in x)):
+        classes = code_elem.get('class', [])
+        text = code_elem.get_text()
+        
+        # Build the formatted text based on classes
+        formatted_parts = []
+        
+        # Handle method indicators
+        if 'meth' in str(classes) or text == 'meth':
+            formatted_parts.append('``meth``')
+            
+        # Handle heading symbols
+        if 'doc-symbol-heading' in classes:
+            formatted_parts.append('###')
+            
+        # Add the main text
+        formatted_parts.append(text)
+        
+        # Add type indicators
+        if 'doc-symbol-class' in classes:
+            formatted_parts.append(DOC_PATTERNS['class'])
+        if 'abstractmethod' in str(classes):
+            formatted_parts.append(DOC_PATTERNS['abstractmethod'])
+        if 'property' in str(classes):
+            formatted_parts.append(DOC_PATTERNS['property'])
+            
+        # Replace the element with our formatted version
+        new_text = ' '.join(formatted_parts)
+        code_elem.replace_with(new_text)
+    
+    # Also look for standalone 'meth' text nodes
+    for elem in soup.find_all(text=re.compile(r'\bmeth\b')):
+        if elem.parent.name not in ['code', 'span']:
+            new_text = elem.replace('meth', '``meth``')
+            elem.replace_with(new_text)
+    
+    return str(soup)
+
 def convert_html_to_markdown(html_content, keep_links=True, keep_images=True, keep_emphasis=True):
     """
-    Converts HTML content into Markdown using html2text with user preferences.
+    Enhanced converter that handles documentation symbols and pseudo-elements.
     """
+    # Pre-process doc symbols
+    processed_html = process_doc_symbols(html_content)
+    
+    # Configure html2text
     converter = html2text.HTML2Text()
     converter.ignore_links = not keep_links
     converter.ignore_images = not keep_images
     converter.ignore_emphasis = not keep_emphasis
-    # Feel free to tweak other converter settings as needed
-    markdown_text = converter.handle(html_content)
+    converter.code_block_style = 'fenced'
+    
+    # Convert to markdown
+    markdown_text = converter.handle(processed_html)
+    
+    # Post-process to clean up formatting
+    markdown_text = re.sub(r'\n{3,}', '\n\n', markdown_text)  # Remove excess newlines
+    markdown_text = re.sub(r'`{3,}', '```', markdown_text)    # Fix code fence markers
+    
     return markdown_text.strip()
 
 def generate_filename_from_url(url):
@@ -188,44 +255,45 @@ def generate_table_of_contents(markdown_text):
     # If you want it absolutely at the top, you can just do: return toc_string + markdown_text
     return toc_string + markdown_text
 
+def generate_doc_header(title):
+    """
+    Generates a documentation header with proper formatting.
+    """
+    return f"""---
+title: {title}
+type: reference
+---
+
+"""
+
 def handle_file_write(markdown_text, output_dir, settings, url):
     """
-    Handles writing the markdown (and optional HTML) to the filesystem.
-    Respects user overwriting preferences and custom filenames.
+    Enhanced file writer that includes proper documentation formatting.
     """
     if settings["custom_filename"] and settings["output_filename"]:
         base_filename = settings["output_filename"]
     else:
         base_filename = generate_filename_from_url(url)
-
-    # If the user wants to append a suffix instead of overwriting
-    # and the file already exists, we find a unique name.
+    
     output_path = os.path.join(output_dir, base_filename)
-
+    
+    # Add documentation header
+    title = os.path.splitext(base_filename)[0].replace('-', ' ').title()
+    header = generate_doc_header(title)
+    final_content = header + markdown_text
+    
+    # Handle file writing with overwrite settings
     if settings["overwrite_existing"] == "Append a unique suffix":
-        # Keep adding a numeric suffix until we find a non-existing file
         file_root, file_ext = os.path.splitext(output_path)
         counter = 1
         while os.path.exists(output_path):
             output_path = f"{file_root}_{counter}{file_ext}"
             counter += 1
-    else:
-        # Overwrite existing
-        pass
-
-    # Write Markdown
+            
     with open(output_path, "w", encoding="utf-8") as f:
-        f.write(markdown_text)
-
-    console.print(f"[bold green]Markdown saved to:[/bold green] {output_path}", style="bold green")
-
-    # Optionally save raw HTML
-    if settings["save_raw_html"]:
-        html_filename = os.path.splitext(output_path)[0] + ".html"
-        console.print(f"Saving raw HTML as: {html_filename}")
-        return html_filename, output_path
-    else:
-        return None, output_path
+        f.write(final_content)
+        
+    return output_path
 
 def run_cli():
     """
@@ -270,10 +338,12 @@ def run_cli():
                 markdown_content = generate_table_of_contents(markdown_content)
 
         # Save to file
-        html_filename, md_filename = handle_file_write(markdown_content, output_directory, settings, url)
+        output_path = handle_file_write(markdown_content, output_directory, settings, url)
 
         # If the user opted to save raw HTML, do so
-        if settings["save_raw_html"] and html_filename:
+        if settings["save_raw_html"]:
+            html_filename = os.path.splitext(output_path)[0] + ".html"
+            console.print(f"Saving raw HTML as: {html_filename}")
             with open(html_filename, "w", encoding="utf-8") as f:
                 f.write(html_content)
 

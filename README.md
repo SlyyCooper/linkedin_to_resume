@@ -1,10 +1,12 @@
-# 🦊 html_to_markdown 🦊
+# 🦊 html_to_markdown & linkedin_to_markdown 🦊
 
-This is an HTML to Markdown converter.
+This repository contains tools for converting HTML and LinkedIn profiles to Markdown format.
 
-This CLI tool, `html_to_md.py`, is a straightforward solution for turning web pages into clean Markdown. It's interactive and has some useful features.
+## HTML to Markdown Converter
 
-## Features
+The `html_to_md.py` CLI tool converts web pages into clean Markdown. It's interactive and has useful features.
+
+### Features
 
 -   **CLI Interface:** Uses a command-line interface with `questionary`.
 -   **URL Input:** Converts web pages from a given URL.
@@ -21,7 +23,7 @@ This CLI tool, `html_to_md.py`, is a straightforward solution for turning web pa
 -   **Error Handling:** Handles URL and network errors.
 -   **Filename Generation:** Files are named automatically or can be custom named.
 
-## How to Use
+### How to Use HTML to MD
 
 1.  **Install:** Get the required libraries:
     ```bash
@@ -33,20 +35,28 @@ This CLI tool, `html_to_md.py`, is a straightforward solution for turning web pa
     ```
 3.  **Follow Prompts:** The script will ask for a URL and settings.
 
+## LinkedIn to Markdown Converter
+
+The `linkedin_to_markdown.py` script extracts LinkedIn profiles and converts them to Markdown format.
+
+### Features
+
+- **Automated Login:** Securely logs into LinkedIn with provided credentials
+- **Profile Extraction:** Navigates to specified profile URL and extracts content
+- **Content Expansion:** Automatically expands "see more" sections
+- **Raw Text Export:** Saves extracted profile text to .marathon file
+- **Selenium-based:** Uses Selenium WebDriver for reliable automation
+
+### How to Use LinkedIn to MD
+
+1. **Install:** Get the required libraries:
+    ```bash
+    pip install selenium
+    ```
+2. **Run:**
+    ```bash
+    python linkedin_to_markdown.py
+    ```
+3. **Follow Prompts:** Enter LinkedIn credentials and profile URL
+
 ## Example
-
-```
-Enter the URL to convert to Markdown (or press Enter to quit): https://example.com
-```
-
-The script will fetch the HTML, convert it, and save it in the `output` directory.
-
-## Contributing
-
-Feel free to fork and submit pull requests.
-
-## License
-
-This project is under the MIT License.
-
-Enjoy! 🦊
