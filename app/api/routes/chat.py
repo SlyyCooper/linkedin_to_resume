@@ -200,7 +200,13 @@ async def get_profile():
             content = f.read()
             
         print(f"Successfully read profile content (length: {len(content)})")
-        return {"content": content}
+        
+        # Return just the inner HTML content
+        return {
+            "content": content.strip(),  # Remove any extra whitespace
+            "timestamp": datetime.datetime.now().isoformat()
+        }
+        
     except Exception as e:
         print(f"Error reading profile: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))

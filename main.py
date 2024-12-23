@@ -1,29 +1,28 @@
 from fastapi import FastAPI, Request
-from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.templating import Jinja2Templates
+import uvicorn
+import os
 from app.api.routes import chat
-from dotenv import load_dotenv
-
-# Load environment variables
-load_dotenv()
 
 app = FastAPI()
-
-# Mount static files
-app.mount("/static", StaticFiles(directory="static"), name="static")
-
-# Setup templates
-templates = Jinja2Templates(directory="templates")
 
 # Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Allows all origins
+    allow_origins=["*"],
     allow_credentials=True,
-    allow_methods=["*"],  # Allows all methods
-    allow_headers=["*"],  # Allows all headers
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
+
+# Mount static directories
+app.mount("/static", StaticFiles(directory="static"), name="static")
+app.mount("/output", StaticFiles(directory="output"), name="output")
+
+# Setup templates
+templates = Jinja2Templates(directory="templates")
 
 # Include routers
 app.include_router(chat.router, prefix="/api")
@@ -37,5 +36,20 @@ async def root(request: Request):
     )
 
 if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True) 
+    # Start the DOCX to HTML watcher in a separate process
+    import multiprocessing
+    from app.services.docx_to_html_service import start_watcher, convert_existing_files
+    
+    # Convert existing files first
+    convert_existing_files("output")
+    
+    # Start the watcher in a separate process
+    watcher_process = multiprocessing.Process(target=start_watcher, args=("output",))
+    watcher_process.start()
+    
+    # Start the FastAPI server
+    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
+    
+    # Clean up the watcher process when the server stops
+    watcher_process.terminate()
+    watcher_process.join() 

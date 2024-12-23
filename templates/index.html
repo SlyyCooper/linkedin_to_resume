@@ -107,104 +107,236 @@
             padding: 30px;
         }
         
-        .profile-content {
+        .profile-container {
             max-width: 800px;
             margin: 0 auto;
-            font-family: Calibri, sans-serif;
-            line-height: 1.15;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.5;
+            color: #2c3e50;
         }
         
-        .profile-content h1 {
-            margin: 0 0 10px 0;
-            color: #333;
-            font-size: 18pt;
-            font-weight: bold;
+        .profile-header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding-bottom: 30px;
+            border-bottom: 1px solid #eee;
         }
         
-        .profile-content h2 {
+        .profile-name {
+            font-size: 32px;
+            font-weight: 700;
+            margin: 0 0 10px;
+            color: #1a1a1a;
+        }
+        
+        .profile-headline {
+            font-size: 20px;
+            font-weight: 400;
             color: #666;
-            font-size: 14pt;
-            font-weight: normal;
-            margin: 0 0 20px 0;
+            margin: 0 0 15px;
+        }
+        
+        .profile-location {
+            color: #666;
+            font-size: 16px;
         }
         
         .profile-section {
-            margin-bottom: 30px;
+            margin-bottom: 40px;
         }
         
         .profile-section h3 {
-            color: #333;
-            font-size: 14pt;
-            font-weight: bold;
+            font-size: 22px;
+            font-weight: 600;
+            color: #1a1a1a;
+            margin: 0 0 20px;
+            padding-bottom: 10px;
             border-bottom: 2px solid #007AFF;
-            padding-bottom: 8px;
-            margin-bottom: 20px;
+        }
+        
+        .profile-about {
+            font-size: 16px;
+            line-height: 1.6;
+            color: #444;
+            white-space: pre-line;
         }
         
         .experience-item, .education-item {
-            margin-bottom: 20px;
+            margin-bottom: 25px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            transition: all 0.2s ease;
         }
         
-        .experience-item h4, .education-item h4 {
-            margin: 0 0 5px 0;
-            color: #333;
-            font-size: 11pt;
-            font-weight: bold;
+        .experience-item:hover, .education-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
         }
         
-        .experience-meta, .education-meta {
+        .experience-header, .education-header {
+            margin-bottom: 12px;
+        }
+        
+        .experience-header h4, .education-header h4 {
+            font-size: 18px;
+            font-weight: 600;
+            color: #1a1a1a;
+            margin: 0 0 5px;
+        }
+        
+        .company-name, .degree {
+            font-size: 16px;
+            color: #007AFF;
+            margin-bottom: 4px;
+        }
+        
+        .duration, .years {
+            font-size: 14px;
             color: #666;
-            font-size: 11pt;
             font-style: italic;
-            margin-bottom: 10px;
         }
         
         .experience-description {
-            font-size: 11pt;
-            color: #333;
-            margin-top: 8px;
-            line-height: 1.4;
+            font-size: 15px;
+            line-height: 1.6;
+            color: #444;
+            white-space: pre-line;
         }
         
-        .skills-list {
+        .skills-list, .languages-list {
             display: flex;
             flex-wrap: wrap;
             gap: 10px;
-            margin-top: 10px;
+            margin-top: 15px;
         }
         
-        .skill-tag {
-            background: #f0f0f0;
+        .skill-tag, .language-tag {
+            background: #e9ecef;
+            color: #495057;
             padding: 6px 12px;
-            border-radius: 16px;
-            font-size: 11pt;
-            color: #333;
+            border-radius: 20px;
+            font-size: 14px;
+            transition: all 0.2s ease;
         }
         
-        .recommendations-section {
-            margin-top: 30px;
+        .skill-tag:hover, .language-tag:hover {
+            background: #007AFF;
+            color: white;
         }
         
-        .recommendation-item {
-            margin-bottom: 20px;
+        .certifications-list {
+            display: grid;
+            gap: 20px;
+        }
+        
+        .certification-item {
             padding: 15px;
             background: #f8f9fa;
             border-radius: 8px;
         }
         
-        .recommendation-author {
-            font-weight: bold;
-            margin-bottom: 5px;
+        .certification-item h4 {
+            font-size: 16px;
+            font-weight: 600;
+            margin: 0 0 8px;
+            color: #1a1a1a;
         }
         
-        .recommendation-relationship {
-            font-style: italic;
+        .certification-meta {
+            font-size: 14px;
             color: #666;
-            margin-bottom: 10px;
         }
         
-        .recommendation-text {
-            line-height: 1.4;
+        .certification-meta .date {
+            margin-left: 10px;
+            font-style: italic;
+        }
+        
+        .recommendations-list {
+            display: grid;
+            gap: 25px;
+        }
+        
+        .recommendation-item {
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            position: relative;
+        }
+        
+        .recommendation-header {
+            margin-bottom: 12px;
+        }
+        
+        .recommender-name {
+            font-weight: 600;
+            color: #1a1a1a;
+        }
+        
+        .relationship {
+            color: #666;
+            font-style: italic;
+            margin-left: 8px;
+        }
+        
+        .recommendation-content {
+            font-size: 15px;
+            line-height: 1.6;
+            color: #444;
+            font-style: italic;
+        }
+        
+        .recommendation-content::before {
+            content: '"';
+            font-size: 24px;
+            color: #007AFF;
+            position: absolute;
+            left: 10px;
+            top: 10px;
+        }
+        
+        .recommendation-content::after {
+            content: '"';
+            font-size: 24px;
+            color: #007AFF;
+            position: absolute;
+            right: 10px;
+            bottom: 10px;
+        }
+        
+        /* Download button styles */
+        .profile-actions {
+            position: sticky;
+            top: 0;
+            background: white;
+            padding: 15px 0;
+            z-index: 100;
+            border-bottom: 1px solid #eee;
+            margin-bottom: 30px;
+        }
+        
+        .download-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 20px;
+            background: #007AFF;
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: 500;
+            transition: all 0.2s ease;
+        }
+        
+        .download-btn:hover {
+            background: #0056b3;
+            transform: translateY(-1px);
+        }
+        
+        .download-btn::before {
+            content: '↓';
+            font-size: 18px;
         }
     </style>
 </head>
@@ -226,14 +358,17 @@
         
         <!-- Profile Display -->
         <div class="profile-panel">
-            <div class="profile-content" id="profile-content">
-                <!-- Profile content will be inserted here -->
+            <div id="profile-container" class="profile-container">
+                <div id="profile-content">
+                    <!-- Profile content will be loaded here -->
+                </div>
             </div>
         </div>
     </div>
 
     <script>
         let messageHistory = [];
+        let lastProfileUpdate = null;
         
         function appendMessage(content, isUser) {
             const messagesDiv = document.getElementById('chat-messages');
@@ -244,44 +379,75 @@
             messagesDiv.scrollTop = messagesDiv.scrollHeight;
         }
         
-        async function displayProfile(profile) {
+        async function displayProfile() {
             try {
-                console.log('Attempting to display profile...');
-                // Fetch the profile content from our endpoint
-                const response = await fetch('/api/profile');
-                if (!response.ok) {
-                    console.error('Failed to fetch profile:', response.status, response.statusText);
-                    throw new Error('Failed to fetch profile content');
-                }
-                
-                const data = await response.json();
-                console.log('Received profile data:', data);
-                
                 const contentDiv = document.getElementById('profile-content');
                 if (!contentDiv) {
                     console.error('Could not find profile-content div');
                     return;
                 }
+
+                // Only show loading state if this is the first load
+                if (!lastProfileUpdate) {
+                    contentDiv.innerHTML = `
+                        <div style="text-align: center; padding: 40px;">
+                            <p>Loading profile...</p>
+                        </div>
+                    `;
+                }
+
+                // First try to get the profile from the API
+                try {
+                    const apiResponse = await fetch('/api/profile');
+                    if (apiResponse.ok) {
+                        const data = await apiResponse.json();
+                        if (data.timestamp !== lastProfileUpdate) {
+                            contentDiv.innerHTML = `
+                                <div class="profile-actions">
+                                    <a href="/api/profile/download" class="download-btn">
+                                        Download DOCX
+                                    </a>
+                                </div>
+                                <div class="profile-content">
+                                    ${data.content}
+                                </div>
+                            `;
+                            lastProfileUpdate = data.timestamp;
+                        }
+                        return;
+                    }
+                } catch (error) {
+                    console.log('API profile not available, trying HTML file...');
+                }
+
+                // If API fails, try to get the HTML file
+                const htmlResponse = await fetch('/output/structured_profile.html');
+                if (htmlResponse.ok) {
+                    const html = await htmlResponse.text();
+                    if (html !== contentDiv.innerHTML) {
+                        contentDiv.innerHTML = html;
+                    }
+                } else if (!lastProfileUpdate) {
+                    // Only show error if we haven't successfully loaded a profile yet
+                    throw new Error('No profile content available');
+                }
                 
-                // Add download button and display the HTML content
-                contentDiv.innerHTML = `
-                    <div class="profile-actions" style="margin-bottom: 20px; text-align: right;">
-                        <a href="/api/profile/download" class="download-btn" style="
-                            padding: 8px 16px;
-                            background: #007AFF;
-                            color: white;
-                            text-decoration: none;
-                            border-radius: 6px;
-                            font-size: 14px;
-                        ">Download DOCX</a>
-                    </div>
-                    <div class="profile-display">
-                        ${data.content}
-                    </div>
-                `;
-                console.log('Profile content updated');
             } catch (error) {
                 console.error('Error displaying profile:', error);
+                if (!lastProfileUpdate) {
+                    // Only show error if we haven't successfully loaded a profile yet
+                    const contentDiv = document.getElementById('profile-content');
+                    if (contentDiv) {
+                        contentDiv.innerHTML = `
+                            <div style="text-align: center; padding: 40px; color: #dc3545;">
+                                <p>Error loading profile: ${error.message}</p>
+                                <button onclick="displayProfile()" class="download-btn" style="margin-top: 20px;">
+                                    Try Again
+                                </button>
+                            </div>
+                        `;
+                    }
+                }
             }
         }
         
@@ -336,7 +502,9 @@
                     );
                     if (toolCall) {
                         console.log('Found LinkedIn extraction tool call');
-                        await displayProfile();  // Call displayProfile to show the extracted profile
+                        // Reset lastProfileUpdate to force a refresh
+                        lastProfileUpdate = null;
+                        await displayProfile();
                     }
                 }
                 
@@ -355,6 +523,12 @@
         
         // Initial message
         appendMessage('Hi! I can help you extract and analyze LinkedIn profiles. Just provide me with the profile URL and your LinkedIn credentials, and I\'ll do the rest.', false);
+
+        // Load profile content when page loads
+        document.addEventListener('DOMContentLoaded', displayProfile);
+
+        // Reload profile content every 5 seconds to check for updates
+        setInterval(displayProfile, 5000);
     </script>
 </body>
 </html> 

@@ -217,91 +217,118 @@ Issued by {cert.issuer}{f' ({cert.date})' if cert.date else ''}
 {rec.text}
 """
     
-    # Generate HTML content
+    # Generate enhanced HTML content with modern styling
     html = f"""
-    <div class="profile-header">
-        <h1>{profile.name}</h1>
-        <h2>{profile.headline}</h2>
-        <p class="location"><strong>Location:</strong> {profile.location}</p>
-    </div>
-
-    <div class="profile-section">
-        <h3>About</h3>
-        <p>{profile.about}</p>
-    </div>
-
-    <div class="profile-section">
-        <h3>Experience</h3>
-        {''.join([f'''
-        <div class="experience-item">
-            <h4>{exp.title} at {exp.company}</h4>
-            <div class="experience-meta">{exp.duration}</div>
-            <div class="experience-description">{exp.description if exp.description else ''}</div>
-        </div>
-        ''' for exp in profile.experience])}
-    </div>
-
-    <div class="profile-section">
-        <h3>Education</h3>
-        {''.join([f'''
-        <div class="education-item">
-            <h4>{edu.school}</h4>
-            <div class="education-meta">
-                {edu.degree}{f' in {edu.field}' if edu.field else ''}
-                {f'<br>{edu.years}' if edu.years else ''}
+    <div class="profile-container">
+        <header class="profile-header">
+            <h1 class="profile-name">{profile.name}</h1>
+            <h2 class="profile-headline">{profile.headline}</h2>
+            <div class="profile-location">
+                <i class="fas fa-map-marker-alt"></i> {profile.location}
             </div>
-        </div>
-        ''' for edu in profile.education])}
-    </div>
+        </header>
+
+        <section class="profile-section">
+            <h3>About</h3>
+            <div class="profile-about">
+                {profile.about}
+            </div>
+        </section>
+
+        <section class="profile-section">
+            <h3>Experience</h3>
+            <div class="experience-list">
+                {''.join([f'''
+                <div class="experience-item">
+                    <div class="experience-header">
+                        <h4>{exp.title}</h4>
+                        <div class="company-name">{exp.company}</div>
+                        <div class="duration">{exp.duration}</div>
+                    </div>
+                    <div class="experience-description">
+                        {exp.description if exp.description else ''}
+                    </div>
+                </div>
+                ''' for exp in profile.experience])}
+            </div>
+        </section>
+
+        <section class="profile-section">
+            <h3>Education</h3>
+            <div class="education-list">
+                {''.join([f'''
+                <div class="education-item">
+                    <div class="education-header">
+                        <h4>{edu.school}</h4>
+                        <div class="degree">
+                            {edu.degree}{f' in {edu.field}' if edu.field else ''}
+                        </div>
+                        {f'<div class="years">{edu.years}</div>' if edu.years else ''}
+                    </div>
+                </div>
+                ''' for edu in profile.education])}
+            </div>
+        </section>
     """
 
     if profile.skills:
         html += f"""
-        <div class="profile-section">
+        <section class="profile-section">
             <h3>Skills</h3>
             <div class="skills-list">
                 {''.join([f'<span class="skill-tag">{skill}</span>' for skill in profile.skills])}
             </div>
-        </div>
+        </section>
         """
 
     if profile.certifications:
         html += f"""
-        <div class="profile-section">
+        <section class="profile-section">
             <h3>Certifications</h3>
-            {''.join([f'''
-            <div class="certification-item">
-                <h4>{cert.name}</h4>
-                <div class="certification-meta">
-                    Issued by {cert.issuer}{f' ({cert.date})' if cert.date else ''}
+            <div class="certifications-list">
+                {''.join([f'''
+                <div class="certification-item">
+                    <h4>{cert.name}</h4>
+                    <div class="certification-meta">
+                        <span class="issuer">Issued by {cert.issuer}</span>
+                        {f'<span class="date">{cert.date}</span>' if cert.date else ''}
+                    </div>
                 </div>
+                ''' for cert in profile.certifications])}
             </div>
-            ''' for cert in profile.certifications])}
-        </div>
+        </section>
         """
 
     if profile.languages:
         html += f"""
-        <div class="profile-section">
+        <section class="profile-section">
             <h3>Languages</h3>
-            <div class="skills-list">
-                {''.join([f'<span class="skill-tag">{lang}</span>' for lang in profile.languages])}
+            <div class="languages-list">
+                {''.join([f'<span class="language-tag">{lang}</span>' for lang in profile.languages])}
             </div>
-        </div>
+        </section>
         """
 
     if profile.recommendations:
         html += f"""
-        <div class="profile-section recommendations-section">
+        <section class="profile-section recommendations-section">
             <h3>Recommendations</h3>
-            {''.join([f'''
-            <div class="recommendation-item">
-                <div class="recommendation-author">{rec.author}</div>
-                <div class="recommendation-relationship">{rec.relationship}</div>
-                <div class="recommendation-text">{rec.text}</div>
+            <div class="recommendations-list">
+                {''.join([f'''
+                <div class="recommendation-item">
+                    <div class="recommendation-header">
+                        <div class="recommender">
+                            <span class="recommender-name">{rec.author}</span>
+                            <span class="relationship">({rec.relationship})</span>
+                        </div>
+                    </div>
+                    <div class="recommendation-content">
+                        "{rec.text}"
+                    </div>
+                </div>
+                ''' for rec in profile.recommendations])}
             </div>
-            ''' for rec in profile.recommendations])}
-        </div>
+        </section>
         """
 
     html += "</div>"
