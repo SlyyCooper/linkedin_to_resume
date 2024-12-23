@@ -1,141 +1,332 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
+    <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LinkedIn Profile Assistant</title>
+    <title>LinkedIn Profile Extractor</title>
     <style>
         body {
-            font-family: Arial, sans-serif;
-            max-width: 800px;
+            margin: 0;
+            padding: 20px;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: #f5f5f5;
+        }
+        
+        .container {
+            display: flex;
+            gap: 20px;
+            max-width: 1400px;
             margin: 0 auto;
-            padding: 20px;
+            height: calc(100vh - 40px);
         }
-        #chat-container {
-            height: 500px;
-            border: 1px solid #ccc;
+        
+        /* Chat Panel Styles */
+        .chat-panel {
+            flex: 0 0 400px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        
+        .chat-header {
             padding: 20px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .chat-header h2 {
+            margin: 0;
+            color: #333;
+        }
+        
+        .chat-messages {
+            flex: 1;
             overflow-y: auto;
-            margin-bottom: 20px;
-            border-radius: 5px;
+            padding: 20px;
         }
-        #input-container {
+        
+        .message {
+            margin-bottom: 20px;
+            max-width: 80%;
+        }
+        
+        .message.user {
+            margin-left: auto;
+            background: #007AFF;
+            color: white;
+            border-radius: 18px 18px 4px 18px;
+            padding: 12px 16px;
+        }
+        
+        .message.assistant {
+            background: #f0f0f0;
+            border-radius: 18px 18px 18px 4px;
+            padding: 12px 16px;
+            color: #333;
+        }
+        
+        .chat-input {
+            padding: 20px;
+            border-top: 1px solid #eee;
             display: flex;
             gap: 10px;
         }
-        #message-input {
-            flex-grow: 1;
-            padding: 10px;
-            border: 1px solid #ccc;
-            border-radius: 5px;
+        
+        .chat-input input {
+            flex: 1;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
         }
-        button {
-            padding: 10px 20px;
-            background-color: #0077b5;
+        
+        .chat-input button {
+            padding: 12px 24px;
+            background: #007AFF;
             color: white;
             border: none;
-            border-radius: 5px;
+            border-radius: 8px;
             cursor: pointer;
+            font-weight: 500;
         }
-        button:hover {
-            background-color: #006097;
+        
+        .chat-input button:hover {
+            background: #0056b3;
         }
-        .message {
-            margin-bottom: 15px;
-            padding: 10px;
-            border-radius: 5px;
+        
+        /* Profile Display Styles */
+        .profile-panel {
+            flex: 1;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            overflow-y: auto;
+            padding: 30px;
         }
-        .user-message {
-            background-color: #e1f5fe;
-            margin-left: 20%;
+        
+        .profile-content {
+            max-width: 800px;
+            margin: 0 auto;
         }
-        .assistant-message {
-            background-color: #f5f5f5;
-            margin-right: 20%;
+        
+        .profile-content h1 {
+            margin: 0 0 10px 0;
+            color: #333;
+        }
+        
+        .profile-content h2 {
+            color: #666;
+            font-weight: normal;
+            margin: 0 0 30px 0;
+        }
+        
+        .profile-section {
+            margin-bottom: 30px;
+        }
+        
+        .profile-section h3 {
+            color: #333;
+            border-bottom: 2px solid #007AFF;
+            padding-bottom: 8px;
+            margin-bottom: 20px;
+        }
+        
+        .experience-item, .education-item {
+            margin-bottom: 20px;
+        }
+        
+        .experience-item h4, .education-item h4 {
+            margin: 0 0 5px 0;
+            color: #333;
+        }
+        
+        .experience-meta, .education-meta {
+            color: #666;
+            font-size: 14px;
+            margin-bottom: 10px;
+        }
+        
+        .skills-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        
+        .skill-tag {
+            background: #f0f0f0;
+            padding: 6px 12px;
+            border-radius: 16px;
+            font-size: 14px;
+            color: #333;
         }
     </style>
 </head>
 <body>
-    <h1>LinkedIn Profile Assistant</h1>
-    <div id="chat-container"></div>
-    <div id="input-container">
-        <input type="text" id="message-input" placeholder="Type your message here...">
-        <button onclick="sendMessage()">Send</button>
+    <div class="container">
+        <!-- Chat Panel -->
+        <div class="chat-panel">
+            <div class="chat-header">
+                <h2>LinkedIn Profile Extractor</h2>
+            </div>
+            <div class="chat-messages" id="chat-messages">
+                <!-- Messages will be inserted here -->
+            </div>
+            <div class="chat-input">
+                <input type="text" id="user-input" placeholder="Type your message...">
+                <button onclick="sendMessage()">Send</button>
+            </div>
+        </div>
+        
+        <!-- Profile Display -->
+        <div class="profile-panel">
+            <div class="profile-content" id="profile-content">
+                <!-- Profile content will be inserted here -->
+            </div>
+        </div>
     </div>
 
     <script>
-        const chatContainer = document.getElementById('chat-container');
-        const messageInput = document.getElementById('message-input');
-        let messageHistory = [];  // Store conversation history
-
-        function addMessage(content, isUser = false) {
+        let messageHistory = [];
+        
+        function appendMessage(content, isUser) {
+            const messagesDiv = document.getElementById('chat-messages');
             const messageDiv = document.createElement('div');
-            messageDiv.className = `message ${isUser ? 'user-message' : 'assistant-message'}`;
+            messageDiv.className = `message ${isUser ? 'user' : 'assistant'}`;
             messageDiv.textContent = content;
-            chatContainer.appendChild(messageDiv);
-            chatContainer.scrollTop = chatContainer.scrollHeight;
-
-            // Add message to history
-            messageHistory.push({
-                role: isUser ? "user" : "assistant",
-                content: content
-            });
+            messagesDiv.appendChild(messageDiv);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
         }
-
+        
+        function displayProfile(profile) {
+            const contentDiv = document.getElementById('profile-content');
+            let html = `
+                <h1>${profile.name}</h1>
+                <h2>${profile.headline}</h2>
+                
+                <div class="profile-section">
+                    <h3>About</h3>
+                    <p>${profile.about}</p>
+                </div>
+                
+                <div class="profile-section">
+                    <h3>Experience</h3>
+                    ${profile.experience.map(exp => `
+                        <div class="experience-item">
+                            <h4>${exp.title} at ${exp.company}</h4>
+                            <div class="experience-meta">${exp.duration}</div>
+                            ${exp.description ? `<p>${exp.description}</p>` : ''}
+                        </div>
+                    `).join('')}
+                </div>
+                
+                <div class="profile-section">
+                    <h3>Education</h3>
+                    ${profile.education.map(edu => `
+                        <div class="education-item">
+                            <h4>${edu.school}</h4>
+                            <div class="education-meta">
+                                ${edu.degree}${edu.field ? ` in ${edu.field}` : ''}
+                                ${edu.years ? ` (${edu.years})` : ''}
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+                
+                <div class="profile-section">
+                    <h3>Skills</h3>
+                    <div class="skills-list">
+                        ${profile.skills.map(skill => `
+                            <span class="skill-tag">${skill}</span>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+            
+            if (profile.certifications && profile.certifications.length > 0) {
+                html += `
+                    <div class="profile-section">
+                        <h3>Certifications</h3>
+                        ${profile.certifications.map(cert => `
+                            <div class="education-item">
+                                <h4>${cert.name}</h4>
+                                <div class="education-meta">
+                                    Issued by ${cert.issuer}
+                                    ${cert.date ? ` (${cert.date})` : ''}
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+            }
+            
+            contentDiv.innerHTML = html;
+        }
+        
         async function sendMessage() {
-            const content = messageInput.value.trim();
-            if (!content) return;
-
-            // Add user message to chat
-            addMessage(content, true);
-            messageInput.value = '';
-
+            const input = document.getElementById('user-input');
+            const message = input.value.trim();
+            if (!message) return;
+            
+            // Clear input
+            input.value = '';
+            
+            // Display user message
+            appendMessage(message, true);
+            
             try {
+                // Send to backend
                 const response = await fetch('/api/chat', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                     },
                     body: JSON.stringify({
-                        messages: messageHistory  // Send entire conversation history
+                        messages: [...messageHistory, {
+                            role: 'user',
+                            content: message
+                        }]
                     })
                 });
-
+                
                 const data = await response.json();
                 
-                if (response.ok) {
-                    // Add assistant's response to chat
-                    addMessage(data.message.content);
-                } else {
-                    // Handle error
-                    addMessage(`Error: ${data.detail}`, false);
+                // Update message history
+                messageHistory.push(
+                    { role: 'user', content: message },
+                    { role: 'assistant', content: data.message.content }
+                );
+                
+                // Display assistant response
+                appendMessage(data.message.content, false);
+                
+                // If there's profile data in the response, display it
+                if (data.message.tool_calls) {
+                    const toolCall = data.message.tool_calls.find(
+                        call => call.function.name === 'linkedin_highlight_and_extract'
+                    );
+                    if (toolCall) {
+                        const result = JSON.parse(toolCall.function.arguments);
+                        displayProfile(result);
+                    }
                 }
+                
             } catch (error) {
-                addMessage(`Error: ${error.message}`, false);
+                console.error('Error:', error);
+                appendMessage('Sorry, there was an error processing your request.', false);
             }
         }
-
-        // Handle Enter key
-        messageInput.addEventListener('keypress', (e) => {
+        
+        // Handle Enter key in input
+        document.getElementById('user-input').addEventListener('keypress', function(e) {
             if (e.key === 'Enter') {
                 sendMessage();
             }
         });
-
-        // Send test message on load
-        window.onload = async () => {
-            try {
-                const response = await fetch('/api/test', {
-                    method: 'POST'
-                });
-                const data = await response.json();
-                if (response.ok) {
-                    addMessage(data.response);
-                }
-            } catch (error) {
-                addMessage(`Error: ${error.message}`, false);
-            }
-        };
+        
+        // Initial message
+        appendMessage('Hi! I can help you extract and analyze LinkedIn profiles. Just provide me with the profile URL and your LinkedIn credentials, and I\'ll do the rest.', false);
     </script>
 </body>
 </html> 

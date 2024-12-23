@@ -13,8 +13,10 @@ from app.services.linkedin_service import (
     structure_profile_data,
     save_structured_profile
 )
+from app.core.config import get_settings
 import json
 from typing import Dict, Any
+import datetime
 
 router = APIRouter()
 
@@ -75,37 +77,38 @@ async def execute_tool_call(tool_call: ToolCall) -> Dict[str, Any]:
 async def chat(request: ChatRequest):
     """Handle chat requests with function calling support."""
     try:
+        # Print debug info
+        print("Received chat request with messages:", len(request.messages))
+        
         # Get initial response from OpenAI
         response = await get_chat_completion(request.messages)
+        
+        # Print debug info
+        print("Got response:", response)
         
         # If no tool calls, return the response directly
         if not response.message.tool_calls:
             return response
             
-        # Create new messages array with original messages and assistant's response
+        # Create new messages array with original messages
         messages = list(request.messages)
+        
+        # Add the assistant's message with the tool calls
         messages.append(response.message)
         
-        # Execute all tool calls and collect their results
-        tool_results = []
+        # For each tool call, execute it and immediately add its result
         for tool_call in response.message.tool_calls:
+            # Execute the tool call
             result = await execute_tool_call(tool_call)
             if not result["success"]:
                 raise ChatError(f"Tool call failed: {result['error']}")
             
-            # Add each tool result with its corresponding tool_call_id
-            tool_results.append({
-                "tool_call_id": tool_call.id,
-                "data": result["data"]
-            })
-        
-        # Add all tool results as tool messages
-        for result in tool_results:
+            # Immediately add the tool response for this specific tool call
             messages.append(
                 ChatMessage(
                     role="tool",
                     content=json.dumps(result["data"]),
-                    tool_call_id=result["tool_call_id"]
+                    tool_call_id=tool_call.id  # Must match the ID from the tool call
                 )
             )
         
@@ -114,25 +117,68 @@ async def chat(request: ChatRequest):
         return final_response
         
     except Exception as e:
+        print(f"Chat error: {str(e)}")
         error_info = handle_chat_error(e)
         raise HTTPException(
             status_code=error_info["status_code"],
             detail=error_info["detail"]
         )
 
-@router.post("/test")
-async def test_chat():
-    """Test endpoint to verify the chatbot is working."""
+@router.post("/test_completion")
+async def test_completion():
+    """Test endpoint to verify OpenAI chat completion is working."""
     try:
-        test_message = ChatMessage(
-            role="user",
-            content="Hi, can you help me with my LinkedIn profile?"
-        )
-        response = await get_chat_completion([test_message])
-        return {"status": "success", "response": response.message.content}
+        # Create a simple test message
+        test_messages = [
+            ChatMessage(
+                role="developer",
+                content="You are a helpful assistant."
+            ),
+            ChatMessage(
+                role="user",
+                content="Say 'Hello, testing!' if you can hear me."
+            )
+        ]
+        
+        # Print debug info before making the request
+        print("Testing OpenAI connection...")
+        print(f"Using model: {get_settings().OPENAI_MODEL}")
+        
+        # Get completion without any tools to keep it simple
+        response = await get_chat_completion(test_messages)
+        
+        return {
+            "status": "success",
+            "model": get_settings().OPENAI_MODEL,
+            "response": response.message.content,
+            "timestamp": datetime.datetime.now().isoformat()
+        }
+        
     except Exception as e:
+        print(f"Test completion error: {str(e)}")
         error_info = handle_chat_error(e)
-        raise HTTPException(
-            status_code=error_info["status_code"],
-            detail=error_info["detail"]
-        ) 
+        return {
+            "status": "error",
+            "error": error_info["detail"],
+            "timestamp": datetime.datetime.now().isoformat()
+        }
+
+@router.get("/health")
+async def health_check():
+    """Simple health check endpoint."""
+    try:
+        settings = get_settings()
+        api_key_configured = bool(settings.OPENAI_API_KEY)
+        
+        return {
+            "status": "healthy",
+            "api_key_configured": api_key_configured,
+            "model": settings.OPENAI_MODEL,
+            "timestamp": datetime.datetime.now().isoformat()
+        }
+    except Exception as e:
+        return {
+            "status": "unhealthy",
+            "error": str(e),
+            "timestamp": datetime.datetime.now().isoformat()
+        } 
