@@ -27,6 +27,139 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+from openai import OpenAI
+from typing import List, Optional
+from pydantic import BaseModel
+from dotenv import load_dotenv
+
+load_dotenv()
+
+class Experience(BaseModel):
+    title: str
+    company: str
+    duration: str
+    description: Optional[str] = None
+
+class Education(BaseModel):
+    school: str
+    degree: str
+    field: Optional[str] = None
+    years: Optional[str] = None
+
+class Certification(BaseModel):
+    name: str
+    issuer: str
+    date: Optional[str] = None
+
+class Volunteer(BaseModel):
+    organization: str
+    role: str
+    duration: Optional[str] = None
+
+class Recommendation(BaseModel):
+    author: str
+    relationship: str
+    text: str
+
+class LinkedInProfile(BaseModel):
+    name: str
+    headline: str
+    location: str
+    about: str
+    experience: List[Experience]
+    education: List[Education]
+    skills: List[str]
+    certifications: Optional[List[Certification]] = None
+    languages: Optional[List[str]] = None
+    volunteer: Optional[List[Volunteer]] = None
+    recommendations: Optional[List[Recommendation]] = None
+
+def structure_profile_data(raw_text: str) -> LinkedInProfile:
+    """
+    Uses GPT-4o to structure the raw LinkedIn profile text.
+    """
+    # Initialize client without any arguments - it will use the OPENAI_API_KEY from .env
+    client = OpenAI()
+    
+    completion = client.beta.chat.completions.parse(
+        model="gpt-4o",
+        messages=[
+            {
+                "role": "system",
+                "content": "Extract the LinkedIn profile information into a structured format."
+            },
+            {
+                "role": "user",
+                "content": raw_text
+            }
+        ],
+        response_format=LinkedInProfile,
+    )
+
+    return completion.choices[0].message.parsed
+
+def save_structured_profile(profile: LinkedInProfile, output_dir: str):
+    """
+    Saves the structured profile as a clean markdown file.
+    """
+    markdown = f"""# {profile.name}
+
+## {profile.headline}
+**Location:** {profile.location}
+
+### About
+{profile.about}
+
+### Experience
+"""
+    
+    for exp in profile.experience:
+        markdown += f"""
+#### {exp.title} at {exp.company}
+*{exp.duration}*
+
+{exp.description if exp.description else ''}
+"""
+
+    markdown += "\n### Education\n"
+    for edu in profile.education:
+        markdown += f"""
+#### {edu.school}
+{edu.degree}{f' in {edu.field}' if edu.field else ''}
+{f'*{edu.years}*' if edu.years else ''}
+"""
+
+    if profile.skills:
+        markdown += "\n### Skills\n"
+        for skill in profile.skills:
+            markdown += f"- {skill}\n"
+
+    if profile.certifications:
+        markdown += "\n### Certifications\n"
+        for cert in profile.certifications:
+            markdown += f"""
+#### {cert.name}
+Issued by {cert.issuer}{f' ({cert.date})' if cert.date else ''}
+"""
+
+    if profile.languages:
+        markdown += "\n### Languages\n"
+        for lang in profile.languages:
+            markdown += f"- {lang}\n"
+
+    if profile.recommendations:
+        markdown += "\n### Recommendations\n"
+        for rec in profile.recommendations:
+            markdown += f"""
+#### From {rec.author} ({rec.relationship})
+{rec.text}
+"""
+    
+    output_file = os.path.join(output_dir, "structured_profile.md")
+    with open(output_file, "w", encoding="utf-8") as f:
+        f.write(markdown)
+    
+    return output_file
 
 def linkedin_highlight_and_extract(
     email: str,
@@ -35,11 +168,7 @@ def linkedin_highlight_and_extract(
     output_dir="output"
 ):
     """
-    Logs into LinkedIn with the provided credentials,
-    navigates to the user-provided profile URL,
-    expands hidden sections by clicking "see more" buttons,
-    highlights everything on the page, then extracts all the text
-    and saves it to 'profile.marathon' in the specified output directory.
+    Modified version of the original function that includes structured data extraction.
     """
 
     # ------------------------------
@@ -136,8 +265,27 @@ def linkedin_highlight_and_extract(
 
         print(f"Entire expanded profile text saved to: {marathon_file}")
 
-    finally:
-        # Close the browser session
+        # After extracting the raw text:
+        try:
+            structured_profile = structure_profile_data(page_text)
+            
+            # Save both raw and structured versions
+            raw_file = os.path.join(output_dir, "profile.marathon")
+            with open(raw_file, "w", encoding="utf-8") as f:
+                f.write(page_text)
+            
+            structured_file = save_structured_profile(structured_profile, output_dir)
+            
+            print(f"Raw profile text saved to: {raw_file}")
+            print(f"Structured profile saved to: {structured_file}")
+            
+            return structured_profile
+            
+        finally:
+            driver.quit()
+
+    except Exception as e:
+        print(f"Error: {e}")
         driver.quit()
 
 
