@@ -28,9 +28,13 @@ from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from openai import OpenAI
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 from pydantic import BaseModel
 from dotenv import load_dotenv
+from docx import Document
+from docx.shared import Pt, Inches, RGBColor
+from docx.enum.text import WD_ALIGN_PARAGRAPH
+from docx.enum.style import WD_STYLE_TYPE
 
 load_dotenv()
 
@@ -74,6 +78,17 @@ class LinkedInProfile(BaseModel):
     volunteer: Optional[List[Volunteer]] = None
     recommendations: Optional[List[Recommendation]] = None
 
+class ResumeStyle(BaseModel):
+    """Defines the styling options for the DOCX resume"""
+    font_name: str = "Calibri"
+    name_size: int = 18
+    heading_size: int = 14
+    normal_size: int = 11
+    heading_color: tuple = (0, 0, 0)  # RGB
+    text_color: tuple = (0, 0, 0)     # RGB
+    margins: float = 1.0              # inches
+    line_spacing: float = 1.15
+
 def structure_profile_data(raw_text: str) -> LinkedInProfile:
     """
     Uses GPT-4o to structure the raw LinkedIn profile text.
@@ -98,10 +113,47 @@ def structure_profile_data(raw_text: str) -> LinkedInProfile:
 
     return completion.choices[0].message.parsed
 
+def markdown_to_docx(markdown_file: str, output_file: str) -> str:
+    """
+    Converts the markdown resume to a simple DOCX file.
+    """
+    # Create new document
+    doc = Document()
+    
+    # Read markdown content
+    with open(markdown_file, 'r', encoding='utf-8') as f:
+        content = f.read()
+    
+    # Split content into lines
+    lines = content.split('\n')
+    
+    # Process each line
+    for line in lines:
+        if line.startswith('# '):  # Name
+            doc.add_heading(line[2:], 0)
+        elif line.startswith('## '):  # Headline
+            doc.add_heading(line[3:], 1)
+        elif line.startswith('### '):  # Section headers
+            doc.add_heading(line[4:], 2)
+        elif line.startswith('#### '):  # Subsections
+            doc.add_heading(line[5:], 3)
+        elif line.startswith('- '):  # List items
+            doc.add_paragraph(line[2:], style='List Bullet')
+        elif line.startswith('*') and line.endswith('*'):  # Italic text
+            p = doc.add_paragraph()
+            p.add_run(line.strip('*')).italic = True
+        elif line.strip():  # Normal text
+            doc.add_paragraph(line)
+    
+    # Save the document
+    doc.save(output_file)
+    return output_file
+
 def save_structured_profile(profile: LinkedInProfile, output_dir: str):
     """
-    Saves the structured profile as a clean markdown file.
+    Saves the structured profile as a clean markdown file and a simple DOCX.
     """
+    # Generate markdown content
     markdown = f"""# {profile.name}
 
 ## {profile.headline}
@@ -155,11 +207,16 @@ Issued by {cert.issuer}{f' ({cert.date})' if cert.date else ''}
 {rec.text}
 """
     
-    output_file = os.path.join(output_dir, "structured_profile.md")
-    with open(output_file, "w", encoding="utf-8") as f:
+    # Save markdown
+    markdown_file = os.path.join(output_dir, "structured_profile.md")
+    with open(markdown_file, "w", encoding="utf-8") as f:
         f.write(markdown)
     
-    return output_file
+    # Save DOCX
+    docx_file = os.path.join(output_dir, "structured_profile.docx")
+    markdown_to_docx(markdown_file, docx_file)
+    
+    return markdown_file, docx_file
 
 def linkedin_highlight_and_extract(
     email: str,
@@ -296,7 +353,14 @@ def main():
     password = getpass.getpass("LinkedIn Password: ")
     profile_url = input("LinkedIn Profile URL (e.g., https://www.linkedin.com/in/username/): ").strip()
 
-    linkedin_highlight_and_extract(email, password, profile_url)
+    profile = linkedin_highlight_and_extract(email, password, profile_url)
+    
+    if profile:
+        print("\nProfile extracted successfully!")
+        print("You can find your files in the output directory:")
+        print("1. structured_profile.md - Markdown version")
+        print("2. structured_profile.docx - Word document version")
+        print("\nTo customize the DOCX styling, you can use the ResumeStyle class.")
 
 
 if __name__ == "__main__":
