@@ -142,6 +142,16 @@ def markdown_to_docx(markdown_file: str, output_file: str) -> str:
         elif line.startswith('*') and line.endswith('*'):  # Italic text
             p = doc.add_paragraph()
             p.add_run(line.strip('*')).italic = True
+        elif line.startswith('**') and line.endswith('**'):  # Bold text
+            p = doc.add_paragraph()
+            p.add_run(line.strip('**')).bold = True
+        elif '**' in line:  # Handle inline bold text (like "**Location:**")
+            p = doc.add_paragraph()
+            parts = line.split('**')
+            for i, part in enumerate(parts):
+                if part:  # Skip empty parts
+                    run = p.add_run(part)
+                    run.bold = (i % 2 == 1)  # Bold for odd-indexed parts
         elif line.strip():  # Normal text
             doc.add_paragraph(line)
     

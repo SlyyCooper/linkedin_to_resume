@@ -2,3 +2,6 @@ myinfo.md
 myresume.md
 /output
 .env
+/docs
+.cursorignore
+.cursorrules

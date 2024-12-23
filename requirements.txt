@@ -1,0 +1,12 @@
+fastapi
+uvicorn
+python-dotenv
+openai
+websockets
+python-docx
+selenium
+pydantic
+pydantic-settings
+jinja2
+python-multipart
+aiofiles 

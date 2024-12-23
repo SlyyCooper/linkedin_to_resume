@@ -399,7 +399,7 @@ Structured Outputs can still contain mistakes. If you see mistakes, try adjustin
 
 #### Avoid JSON schema divergence
 
-To prevent your JSON Schema and corresponding types in your programming language from diverging, we strongly recommend using the native Pydantic/zod sdk support.
+To prevent your JSON Schema and corresponding types in your programming language from diverging, we strongly recommend using the native Pydantic sdk support.
 
 If you prefer to specify the JSON schema directly, you could add CI rules that flag when either the JSON schema or underlying data objects are edited, or add a CI step that auto-generates the JSON Schema from type definitions (or vice-versa).
 
