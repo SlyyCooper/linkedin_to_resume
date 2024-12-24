@@ -6,12 +6,17 @@ This script uses Selenium (Python) to:
 1. Prompt for LinkedIn credentials (username/email & password).
 2. Prompt for the LinkedIn profile URL.
 3. Log in via LinkedIn's login page.
+   - If a verification puzzle appears, it pauses, allows the user to solve it manually,
+     and continues once the user presses Enter.
 4. Navigate to the specified profile URL.
 5. Locate & click "see more" buttons to expand hidden sections.
 6. Programmatically "highlight everything" on the page (simulating Ctrl + A).
 7. Extract all visible text from the entire page post-expansion.
-8. Save it into an 'output/profile.marathon' file
-   so that you have a direct, raw copy of the entire expanded profile.
+8. Save it into an 'output/profile.marathon' file.
+
+It also includes optional logic to parse the raw text into a structured format
+using GPT-4o. If you want just the raw text extraction, you can remove or ignore
+the "structure_profile_data" and "save_structured_profile" parts.
 
 DISCLAIMER:
 - This script is a proof-of-concept and may violate LinkedIn's User Agreement
@@ -22,15 +27,21 @@ DISCLAIMER:
 import os
 import time
 import getpass
+from typing import List, Optional, Dict, Any
+
+# Selenium imports
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+
+# Optional: GPT-based parsing (requires your environment set up accordingly)
 from openai import OpenAI
-from typing import List, Optional, Dict, Any
 from pydantic import BaseModel
 from dotenv import load_dotenv
+
+# Optional: For Word/Markdown conversions
 from docx import Document
 from docx.shared import Pt, Inches, RGBColor
 from docx.enum.text import WD_ALIGN_PARAGRAPH
@@ -38,6 +49,9 @@ from docx.enum.style import WD_STYLE_TYPE
 
 load_dotenv()
 
+# ------------------------------
+# 1. Data Models (Optional GPT)
+# ------------------------------
 class Experience(BaseModel):
     title: str
     company: str
@@ -78,8 +92,9 @@ class LinkedInProfile(BaseModel):
     volunteer: Optional[List[Volunteer]] = None
     recommendations: Optional[List[Recommendation]] = None
 
+# Optional styling class
 class ResumeStyle(BaseModel):
-    """Defines the styling options for the DOCX resume"""
+    """Defines the styling options for the DOCX resume (optional)"""
     font_name: str = "Calibri"
     name_size: int = 18
     heading_size: int = 14
@@ -89,11 +104,14 @@ class ResumeStyle(BaseModel):
     margins: float = 1.0              # inches
     line_spacing: float = 1.15
 
+# ------------------------------------
+# 2. GPT-based Structuring (Optional)
+# ------------------------------------
 def structure_profile_data(raw_text: str) -> LinkedInProfile:
     """
-    Uses GPT-4o to structure the raw LinkedIn profile text.
+    Uses GPT-4o (example usage) to structure the raw LinkedIn profile text.
+    Customize if you're not actually using GPT-4o or a similar approach.
     """
-    # Initialize client without any arguments - it will use the OPENAI_API_KEY from .env
     client = OpenAI()
     
     completion = client.beta.chat.completions.parse(
@@ -117,17 +135,11 @@ def markdown_to_docx(markdown_file: str, output_file: str) -> str:
     """
     Converts the markdown resume to a simple DOCX file.
     """
-    # Create new document
     doc = Document()
-    
-    # Read markdown content
     with open(markdown_file, 'r', encoding='utf-8') as f:
         content = f.read()
     
-    # Split content into lines
     lines = content.split('\n')
-    
-    # Process each line
     for line in lines:
         if line.startswith('# '):  # Name
             doc.add_heading(line[2:], 0)
@@ -145,17 +157,16 @@ def markdown_to_docx(markdown_file: str, output_file: str) -> str:
         elif line.startswith('**') and line.endswith('**'):  # Bold text
             p = doc.add_paragraph()
             p.add_run(line.strip('**')).bold = True
-        elif '**' in line:  # Handle inline bold text (like "**Location:**")
+        elif '**' in line:  # Handle inline bold text
             p = doc.add_paragraph()
             parts = line.split('**')
             for i, part in enumerate(parts):
                 if part:  # Skip empty parts
                     run = p.add_run(part)
                     run.bold = (i % 2 == 1)  # Bold for odd-indexed parts
-        elif line.strip():  # Normal text
+        elif line.strip():
             doc.add_paragraph(line)
-    
-    # Save the document
+
     doc.save(output_file)
     return output_file
 
@@ -163,7 +174,9 @@ def save_structured_profile(profile: LinkedInProfile, output_dir: str):
     """
     Saves the structured profile as markdown, HTML, and DOCX formats.
     """
-    # Generate markdown content
+    # ------------------------
+    # Generate Markdown
+    # ------------------------
     markdown = f"""# {profile.name}
 
 ## {profile.headline}
@@ -216,8 +229,10 @@ Issued by {cert.issuer}{f' ({cert.date})' if cert.date else ''}
 #### From {rec.author} ({rec.relationship})
 {rec.text}
 """
-    
-    # Generate enhanced HTML content with modern styling
+
+    # ------------------------
+    # Generate HTML (Optional)
+    # ------------------------
     html = f"""
     <div class="profile-container">
         <header class="profile-header">
@@ -332,23 +347,29 @@ Issued by {cert.issuer}{f' ({cert.date})' if cert.date else ''}
         """
 
     html += "</div>"
-    
-    # Save markdown
+
+    # ------------------------
+    # Save All Files
+    # ------------------------
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir, exist_ok=True)
+
     markdown_file = os.path.join(output_dir, "structured_profile.md")
     with open(markdown_file, "w", encoding="utf-8") as f:
         f.write(markdown)
     
-    # Save HTML
     html_file = os.path.join(output_dir, "structured_profile.html")
     with open(html_file, "w", encoding="utf-8") as f:
         f.write(html)
     
-    # Save DOCX
     docx_file = os.path.join(output_dir, "structured_profile.docx")
     markdown_to_docx(markdown_file, docx_file)
     
     return markdown_file, html_file, docx_file
 
+# ------------------------------------
+# 3. Main Extraction Logic
+# ------------------------------------
 def linkedin_highlight_and_extract(
     email: str,
     password: str,
@@ -356,17 +377,23 @@ def linkedin_highlight_and_extract(
     output_dir="output"
 ):
     """
-    Modified version of the original function that includes structured data extraction.
+    Logs into LinkedIn with the provided credentials,
+    navigates to the user-provided profile URL,
+    expands hidden sections by clicking "see more" buttons,
+    highlights everything on the page, then extracts all the text
+    and saves it to 'profile.marathon'.
+    
+    Also includes an optional attempt to parse the data via GPT-4o,
+    saving structured results if possible.
     """
 
     # ------------------------------
     # 1. Configure Selenium Options
     # ------------------------------
     chrome_options = Options()
-    # (Optional) Uncomment to run headless if you don't need to see the browser:
+    # (Optional) Uncomment if you want a headless browser:
     # chrome_options.add_argument('--headless')
 
-    # Instantiate the WebDriver (adjust if using another browser)
     driver = webdriver.Chrome(options=chrome_options)
 
     try:
@@ -375,23 +402,43 @@ def linkedin_highlight_and_extract(
         # --------------------
         driver.get("https://www.linkedin.com/login")
 
-        # Wait for login form to appear
+        # Wait for login form
         WebDriverWait(driver, 20).until(
             EC.presence_of_element_located((By.ID, "username"))
         )
 
-        # Fill out username/email
         email_input = driver.find_element(By.ID, "username")
         email_input.clear()
         email_input.send_keys(email)
 
-        # Fill out password
         password_input = driver.find_element(By.ID, "password")
         password_input.clear()
         password_input.send_keys(password)
 
         # Submit form
         driver.find_element(By.XPATH, '//button[@type="submit"]').click()
+
+        # ------------------------------------------------------
+        # CAPTCHA / Verification Puzzle Handling (if it appears)
+        # ------------------------------------------------------
+        # This logic tries to detect a puzzle/captcha. If found, it pauses
+        # and lets the user solve it manually in the browser, then continue.
+        time.sleep(2)  # short wait for potential puzzle to appear
+
+        # Example: we look for an element with class "captcha__prompt" or similar.
+        # You may need to adjust the selector to match LinkedIn's actual puzzle/captcha.
+        try:
+            # If this doesn't exist, it will throw a TimeoutException
+            puzzle_element = WebDriverWait(driver, 5).until(
+                EC.presence_of_element_located((By.CSS_SELECTOR, ".captcha__prompt, .rc-imageselect-tile"))  # Example CSS
+            )
+            if puzzle_element:
+                print("\nA verification puzzle has appeared.")
+                print("Please solve it in the browser window. Then press Enter here to continue.")
+                input("Press Enter once the puzzle is solved...")
+        except:
+            # If no puzzle is found within 5s, we assume no captcha is needed
+            pass
 
         # ------------------------------------------------
         # 3. Navigate to the user-specified profile URL
@@ -400,45 +447,36 @@ def linkedin_highlight_and_extract(
             EC.presence_of_element_located((By.TAG_NAME, "body"))
         )
 
-        # Give some time for login to complete
-        time.sleep(5)
-
+        time.sleep(3)  # Additional wait after login
         driver.get(profile_url)
-        # Wait for the profile page to load
-        time.sleep(5)  # Adjust as needed
+
+        time.sleep(5)  # Wait for the profile page to load
 
         # -------------------------------------------------------
         # 4. Locate & Click "see more" Buttons to Expand Sections
         # -------------------------------------------------------
-        # Typically, these "see more" buttons share certain classes or text.
-        # We'll look for commonly used classes:
         see_more_selectors = [
             ".inline-show-more-text__button.inline-show-more-text__button--light.link"
         ]
-
         for selector in see_more_selectors:
             buttons = driver.find_elements(By.CSS_SELECTOR, selector)
             for btn in buttons:
                 try:
                     driver.execute_script("arguments[0].click();", btn)
-                    time.sleep(1)  # short pause for content to expand
+                    time.sleep(1)
                 except Exception as e:
                     print(f"Warning: Could not click a 'see more' button: {e}")
 
         # -------------------------
         # 5. "Highlight Everything"
         # -------------------------
-        # This simulates selecting the entire DOM (like Ctrl + A).
-        # Note: This doesn't actually place text on your OS clipboard,
-        # but it visually selects all on the page. For extraction in
-        # Python, we will use .text or JavaScript to retrieve it below.
+        # Simulate Ctrl + A in the browser
         driver.execute_script("window.getSelection().removeAllRanges();")
         driver.execute_script("const range = document.createRange(); range.selectNode(document.body); window.getSelection().addRange(range);")
 
         # -------------------------------
         # 6. Extract All Visible Text
         # -------------------------------
-        # The simplest approach is to get everything from document.body.innerText
         page_text = driver.execute_script("return document.body.innerText")
 
         # ---------------------------------
@@ -453,22 +491,26 @@ def linkedin_highlight_and_extract(
 
         print(f"Entire expanded profile text saved to: {marathon_file}")
 
-        # After extracting the raw text:
+        # ------------------------------------------------
+        # 8. (Optional) Parse & Save Structured Versions
+        # ------------------------------------------------
         try:
             structured_profile = structure_profile_data(page_text)
             
-            # Save both raw and structured versions
             raw_file = os.path.join(output_dir, "profile.marathon")
             with open(raw_file, "w", encoding="utf-8") as f:
                 f.write(page_text)
             
-            structured_file = save_structured_profile(structured_profile, output_dir)
-            
-            print(f"Raw profile text saved to: {raw_file}")
-            print(f"Structured profile saved to: {structured_file}")
-            
+            # Save structured as MD/HTML/DOCX
+            structured_files = save_structured_profile(structured_profile, output_dir)
+
+            print(f"\nStructured profile saved. Files generated:")
+            print(f"1) {structured_files[0]} (Markdown)")
+            print(f"2) {structured_files[1]} (HTML)")
+            print(f"3) {structured_files[2]} (DOCX)")
+
             return structured_profile
-            
+
         finally:
             driver.quit()
 
@@ -476,7 +518,9 @@ def linkedin_highlight_and_extract(
         print(f"Error: {e}")
         driver.quit()
 
-
+# --------------------------------
+# 4. Main Entry Point
+# --------------------------------
 def main():
     print("LinkedIn Highlight & Extract")
     print("-------------------------------------")
@@ -489,10 +533,10 @@ def main():
     if profile:
         print("\nProfile extracted successfully!")
         print("You can find your files in the output directory:")
-        print("1. structured_profile.md - Markdown version")
-        print("2. structured_profile.docx - Word document version")
-        print("\nTo customize the DOCX styling, you can use the ResumeStyle class.")
-
+        print("1. profile.marathon (raw text)")
+        print("2. structured_profile.md (if GPT parsing succeeds)")
+        print("3. structured_profile.docx (Word doc)")
+        print("4. structured_profile.html (HTML version)")
 
 if __name__ == "__main__":
     main()
