@@ -338,6 +338,55 @@
             content: '↓';
             font-size: 18px;
         }
+
+        /* Loading animation styles */
+        .loading-container {
+            text-align: center;
+            padding: 60px 20px;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .loading-spinner {
+            width: 80px;
+            height: 80px;
+            margin-bottom: 30px;
+            display: inline-block;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #007AFF;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .loading-text {
+            color: #1a1a1a;
+            font-size: 24px;
+            margin-bottom: 15px;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 0.6; }
+            50% { opacity: 1; }
+            100% { opacity: 0.6; }
+        }
+
+        .loading-subtext {
+            color: #666;
+            font-size: 16px;
+            line-height: 1.6;
+            max-width: 500px;
+            margin: 0 auto;
+        }
     </style>
 </head>
 <body>
@@ -395,7 +444,7 @@
                     return;
                 }
 
-                // Only show loading state if this is the first load
+                // Only show loading state if this is the first load and we had a previous update
                 if (!lastProfileUpdate) {
                     contentDiv.innerHTML = `
                         <div style="text-align: center; padding: 40px;">
@@ -436,22 +485,45 @@
                         contentDiv.innerHTML = html;
                     }
                 } else if (!lastProfileUpdate) {
-                    // Only show error if we haven't successfully loaded a profile yet
-                    throw new Error('No profile content available');
+                    // Show welcome message if no profile exists yet
+                    contentDiv.innerHTML = `
+                        <div style="text-align: center; padding: 60px 20px;">
+                            <div style="margin-bottom: 30px;">
+                                <svg width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="#007AFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                                    <circle cx="12" cy="7" r="4"></circle>
+                                </svg>
+                            </div>
+                            <h2 style="color: #1a1a1a; font-size: 24px; margin-bottom: 15px;">
+                                Ready to Generate Your Resume
+                            </h2>
+                            <p style="color: #666; font-size: 16px; line-height: 1.6; max-width: 500px; margin: 0 auto;">
+                                Enter a LinkedIn profile URL in the chat, and I'll help you extract and format the information into a professional resume.
+                            </p>
+                        </div>
+                    `;
                 }
                 
             } catch (error) {
                 console.error('Error displaying profile:', error);
                 if (!lastProfileUpdate) {
-                    // Only show error if we haven't successfully loaded a profile yet
+                    // Show welcome message instead of error if no profile exists
                     const contentDiv = document.getElementById('profile-content');
                     if (contentDiv) {
                         contentDiv.innerHTML = `
-                            <div style="text-align: center; padding: 40px; color: #dc3545;">
-                                <p>Error loading profile: ${error.message}</p>
-                                <button onclick="displayProfile()" class="download-btn" style="margin-top: 20px;">
-                                    Try Again
-                                </button>
+                            <div style="text-align: center; padding: 60px 20px;">
+                                <div style="margin-bottom: 30px;">
+                                    <svg width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="#007AFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                                        <circle cx="12" cy="7" r="4"></circle>
+                                    </svg>
+                                </div>
+                                <h2 style="color: #1a1a1a; font-size: 24px; margin-bottom: 15px;">
+                                    Ready to Generate Your Resume
+                                </h2>
+                                <p style="color: #666; font-size: 16px; line-height: 1.6; max-width: 500px; margin: 0 auto;">
+                                    Enter a LinkedIn profile URL in the chat, and I'll help you extract and format the information into a professional resume.
+                                </p>
                             </div>
                         `;
                     }
@@ -510,6 +582,19 @@
                     );
                     if (toolCall) {
                         console.log('Found LinkedIn extraction tool call');
+                        // Show loading animation
+                        const contentDiv = document.getElementById('profile-content');
+                        if (contentDiv) {
+                            contentDiv.innerHTML = `
+                                <div class="loading-container">
+                                    <div class="loading-spinner"></div>
+                                    <h2 class="loading-text">Generating Your Resume</h2>
+                                    <p class="loading-subtext">
+                                        Extracting and formatting your LinkedIn profile information...
+                                    </p>
+                                </div>
+                            `;
+                        }
                         // Reset lastProfileUpdate to force a refresh
                         lastProfileUpdate = null;
                         await displayProfile();
