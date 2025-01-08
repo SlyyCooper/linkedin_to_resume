@@ -1,3 +1,7 @@
+**FOR EDUCATIONAL PURPOSES ONLY**
+
+This repository is intended strictly for educational purposes. Users are responsible for ensuring their use complies with all applicable terms of service and regulations.
+
 # 🦊 html_to_markdown & linkedin_to_markdown 🦊
 
 This repository contains tools for converting HTML and LinkedIn profiles to Markdown format.
